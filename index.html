@@ -107,9 +107,6 @@ select option{color:#000}
 <div class="panel sheet" id="sheet"></div>
 </section>
 <section class="alert" id="alert" role="status"></section>
-<section class="panel frame"><div class="ph" id="ph"><p class="note" id="phEmpty">ยังไม่มีรูป กด "เพิ่มรูป" เพื่อใส่รูปครอบครัว</p></div>
-<div class="phbar"><button id="phPrev" aria-label="รูปก่อน">‹</button><label class="go phadd">＋ เพิ่มรูป<input id="phIn" type="file" accept="image/*" multiple hidden></label><button id="phDel" class="del">ลบรูปนี้</button><button id="phNext" aria-label="รูปถัดไป">›</button></div>
-<p class="note" id="phSt"></p></section>
 <section class="cols">
 <div class="stack">
 <div class="panel"><div class="mhead"><button id="prev" aria-label="เดือนก่อน">‹</button><b id="mtitle"></b><button id="next" aria-label="เดือนถัดไป">›</button></div>
@@ -231,23 +228,7 @@ async function loadWeather(){
   if(v>75)W.push(["hot","😷 ฝุ่น PM2.5 สูงมาก ("+v+") งดออกนอกบ้าน ใส่หน้ากาก"]);else if(v>37.5)W.push(["dust","😷 วันนี้ฝุ่นเยอะ ("+v+") ออกนอกบ้านใส่หน้ากากด้วย"]);
  }catch(e){$("pmTx").textContent="โหลดค่าฝุ่นไม่ได้"}
  wxAlerts=W;$("wUp").textContent="อัปเดต "+pad(now().getHours())+":"+pad(now().getMinutes())+" น. · ข้อมูลจาก Open-Meteo";renderSheet()}
-// ===== รูปครอบครัว =====
-let photos=[],pi=0;
-async function loadPhotos(){try{if(!sb)throw 0;const{data,error}=await sb.storage.from("photos").list("",{limit:500,sortBy:{column:"name",order:"desc"}});if(error)throw error;photos=(data||[]).filter(f=>/\.jpg$/.test(f.name)).map(f=>sb.storage.from("photos").getPublicUrl(f.name).data.publicUrl)}catch(e){photos=[]}if(pi>=photos.length)pi=0;showPhoto()}
-function showPhoto(){const box=$("ph");$("phEmpty").hidden=photos.length>0;$("phDel").hidden=!photos.length;
- const old=box.querySelector("img.on");if(!photos.length){if(old)old.remove();return}
- const im=new Image();im.alt="รูปครอบครัว";im.src=String(photos[pi]);im.onload=()=>{box.appendChild(im);requestAnimationFrame(()=>im.classList.add("on"));if(old){old.classList.remove("on");setTimeout(()=>old.remove(),1300)}}}
-const step=n=>{if(!photos.length)return;pi=(pi+n+photos.length)%photos.length;showPhoto()};
-$("phPrev").onclick=()=>step(-1);$("phNext").onclick=()=>step(1);
-setInterval(()=>step(1),8000);
-function shrink(file){return new Promise((ok,no)=>{const u=URL.createObjectURL(file),im=new Image();im.onload=()=>{const k=Math.min(1,1600/Math.max(im.width,im.height)),c=document.createElement("canvas");c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext("2d").drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(u);c.toBlob(b=>b?ok(b):no(),"image/jpeg",0.85)};im.onerror=no;im.src=u})}
-async function photoPost(body){const isForm=body instanceof FormData;if(isForm)body.append("pin",getPin());const r=await fetch(FN,{method:"POST",headers:{apikey:CFG.key,...(isForm?{}:{"Content-Type":"application/json"})},body:isForm?body:JSON.stringify({...body,pin:getPin()})});const j=await r.json().catch(()=>({}));if(!r.ok){pinFail(j.code);throw new Error(j.error||"ผิดพลาด")}pinGood();return j}
-$("phIn").onchange=async e=>{const fs=[...e.target.files];if(!fs.length)return;if(!getPin()){$("phSt").textContent="ใส่รหัสครอบครัวในเมนู เพิ่มวันสำคัญ ก่อนนะ";$("addBox").open=true;return}
- let n=0;for(const f of fs){$("phSt").textContent="กำลังอัปโหลด "+(n+1)+"/"+fs.length+"…";try{const fd=new FormData();fd.append("photo",await shrink(f),"p.jpg");await photoPost(fd);n++}catch(err){$("phSt").textContent="อัปโหลดไม่ได้: "+(err.message||"ไฟล์นี้ใช้ไม่ได้")}}
- e.target.value="";if(n)$("phSt").textContent="เพิ่มรูปแล้ว "+n+" รูป ✓";pi=0;await loadPhotos()};
-$("phDel").onclick=async()=>{const b=$("phDel");if(b.dataset.ok!=="1"){b.dataset.ok="1";b.textContent="กดอีกครั้งเพื่อลบ";setTimeout(()=>{b.dataset.ok="";b.textContent="ลบรูปนี้"},4000);return}
- b.dataset.ok="";b.textContent="ลบรูปนี้";try{await photoPost({action:"delete",path:String(photos[pi]).split("/").pop().split("?")[0]});await loadPhotos()}catch(err){$("phSt").textContent="ลบไม่ได้: "+err.message}};
-loadPhotos();setInterval(loadPhotos,5*60000);
+
 loadEvents();loadWeather();
 let lastDay=key(now());
 setInterval(()=>{renderClock();if(key(now())!==lastDay){lastDay=key(now());renderAll()}},20000);
